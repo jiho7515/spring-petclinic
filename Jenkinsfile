@@ -5,6 +5,9 @@ pipeline {
     maven 'M3'
     jdk 'JDK21'
   }
+  environment {
+    DOCKERHUB_CREDENTIALS = credentials('dockerCredential')
+  }
 
   stages {
     // Github Clone
@@ -26,10 +29,30 @@ pipeline {
     steps {
         dir("${env.WORKSPACE}") {
           sh """
-            docker build -t wlgh7515/spring-petclinic:$BUILD_NUMBER .
-            docker tag wlgh7515/spring-petclinic:$BUILD_NUMBER wlgh7515/spring-petclinic:latest
+            docker build -t spring-petclinic:$BUILD_NUMBER .
+            docker tag spring-petclinic:$BUILD_NUMBER wlgh7515/spring-petclinic:latest
             """
         }
+      }
+    }
+
+    //Docker Login and Push
+    stage ('Docker Login and Push') {
+      steps {
+        sh """
+        echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin
+        docker push wlgh7515/spring-petclinic:latest
+        """
+      }
+    }
+
+    // Docker Image Remove
+    stage ('Docker Image Remove') {
+      steps {
+      sh """
+      docker rmi spring-petclinic:$BUILD_NUMBER
+      docker rmi wlgh7515/spring-petclinic:latest
+      """
       }
     }
     
